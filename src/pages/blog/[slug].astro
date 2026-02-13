@@ -1,13 +1,13 @@
 ---
-import BaseLayout from '/src/layouts/BaseLayout.astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog');
 
-  return posts.map(post => ({
+  return posts.map((post) => ({
     params: { slug: post.slug },
-    props: { post }
+    props: { post },
   }));
 }
 
@@ -17,28 +17,180 @@ const { Content } = await post.render();
 
 <BaseLayout title={post.data.title}>
 
-  <section class="post-container">
+  <div class="post-wrapper">
 
-    <div class="post-header">
+    <!-- 🔥 COLUMNA POST -->
+    <article class="post-main">
+      <h1 class="post-title">{post.data.title}</h1>
+      <div class="post-date">{post.data.date.toDateString()}</div>
 
-      <div class="post-date">
-        {post.data.date.toDateString()}
+      <div class="post-content">
+        <Content />
       </div>
-
-      <!-- 🔵 MISMO transition:name -->
-      <h1
-        class="post-title"
-        transition:name={`title-${post.slug}`}
-      >
-        {post.data.title}
-      </h1>
-
-    </div>
-
-    <article class="post-content">
-      <Content />
     </article>
 
-  </section>
+
+    <!-- 🔵 COLUMNA COMENTARIOS -->
+    <aside class="comments-section">
+      <h2>Comentarios</h2>
+
+      <div id="comments-list"></div>
+
+      <form id="comment-form">
+        <input
+          type="text"
+          id="comment-name"
+          placeholder="Nombre (opcional)"
+        />
+
+        <textarea
+          id="comment-content"
+          placeholder="Escribe tu comentario..."
+          required
+        ></textarea>
+
+        <button type="submit">Publicar</button>
+      </form>
+    </aside>
+
+  </div>
+
+
+  <!-- 🔥 ESTILOS -->
+  <style>
+    .post-wrapper {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 60px;
+      max-width: 1200px;
+      margin: 80px auto;
+      padding: 0 40px;
+    }
+
+    .post-main {
+      max-width: 700px;
+    }
+
+    .post-title {
+      font-size: 2.2em;
+      margin-bottom: 10px;
+    }
+
+    .post-date {
+      font-size: 0.8em;
+      color: var(--text-light);
+      margin-bottom: 40px;
+    }
+
+    .post-content {
+      line-height: 1.8;
+      font-size: 1em;
+    }
+
+    .comments-section {
+      border-left: 1px solid var(--border);
+      padding-left: 30px;
+    }
+
+    .comments-section h2 {
+      margin-bottom: 20px;
+      font-size: 1.1em;
+    }
+
+    #comment-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 30px;
+    }
+
+    #comment-form input,
+    #comment-form textarea {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      padding: 10px;
+      color: var(--text);
+      font-family: inherit;
+    }
+
+    #comment-form textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    #comment-form button {
+      background: transparent;
+      border: 1px solid var(--border);
+      padding: 10px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    #comment-form button:hover {
+      border-color: white;
+    }
+
+    /* 📱 Responsive */
+    @media (max-width: 900px) {
+      .post-wrapper {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+
+      .comments-section {
+        border-left: none;
+        border-top: 1px solid var(--border);
+        padding-left: 0;
+        padding-top: 30px;
+      }
+    }
+  </style>
+
+
+  <!-- 🔥 SCRIPT COMENTARIOS -->
+  <script>
+    const slug = "{post.slug}";
+
+    async function loadComments() {
+      const res = await fetch(`/api/comments?slug=${slug}`);
+      const comments = await res.json();
+
+      const container = document.getElementById("comments-list");
+      container.innerHTML = "";
+
+      comments.forEach((c) => {
+        const div = document.createElement("div");
+        div.style.marginBottom = "20px";
+        div.innerHTML = `
+          <strong>${c.name}</strong>
+          <p>${c.content}</p>
+          <small style="color: gray">${new Date(c.created_at).toLocaleString()}</small>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    document.getElementById("comment-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById("comment-name").value;
+      const content = document.getElementById("comment-content").value;
+
+      await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          post_slug: slug,
+          name,
+          content,
+        }),
+      });
+
+      document.getElementById("comment-content").value = "";
+      loadComments();
+    });
+
+    loadComments();
+  </script>
 
 </BaseLayout>
