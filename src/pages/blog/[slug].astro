@@ -7,52 +7,69 @@ const { slug } = Astro.params;
 const posts = await getCollection('blog');
 const post = posts.find((p) => p.slug === slug);
 
-if (!post) {
-  throw new Error("Post no encontrado");
-}
+if (!post) throw new Error("Post no encontrado");
 
 const { Content } = await post.render();
 ---
 
 <BaseLayout title={post.data.title}>
 
-  <div class="post-wrapper">
+  <!-- CONTENIDO DEL POST -->
+  <div class="post-container">
+    <h1 class="post-title">{post.data.title}</h1>
+    <div class="post-date">{post.data.date.toDateString()}</div>
 
-    <article class="post-main">
-      <h1 class="post-title">{post.data.title}</h1>
-      <div class="post-date">{post.data.date.toDateString()}</div>
-
-      <div class="post-content">
-        <Content />
-      </div>
-    </article>
-
-    <aside class="comments-section">
-      <h2>Comentarios</h2>
-
-      <div id="comments-list"></div>
-
-      <form id="comment-form">
-        <input type="text" id="comment-name" placeholder="Nombre (opcional)" />
-        <textarea id="comment-content" placeholder="Escribe tu comentario..." required></textarea>
-        <button type="submit">Publicar</button>
-      </form>
-    </aside>
-
+    <div class="post-content">
+      <Content />
+    </div>
   </div>
 
+  <!-- BOTÓN FLOTANTE -->
+  <button class="comments-toggle" id="openComments">
+    Comentarios
+  </button>
+
+  <!-- OVERLAY -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- PANEL LATERAL -->
+  <aside class="comments-panel" id="commentsPanel">
+    <div class="panel-header">
+      <span>Comentarios</span>
+      <button id="closeComments">×</button>
+    </div>
+
+    <!-- FORMULARIO -->
+    <form id="comment-form" class="comment-form">
+      <textarea
+        id="comment-content"
+        placeholder="Escribe un comentario..."
+        required
+      ></textarea>
+
+      <input
+        type="text"
+        id="comment-name"
+        placeholder="Nombre (opcional)"
+      />
+
+      <button type="submit" class="submit-btn">Enviar</button>
+    </form>
+
+    <!-- LISTA -->
+    <div id="comments-list" class="comments-list"></div>
+  </aside>
+
   <style>
-    .post-wrapper {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 60px;
-      max-width: 1200px;
-      margin: 80px auto;
+    .post-container {
+      max-width: 900px;
+      margin: 140px auto;
       padding: 0 40px;
+      line-height: 2;
     }
 
-    .post-main {
-      max-width: 700px;
+    .post-title {
+      margin-bottom: 10px;
     }
 
     .post-date {
@@ -61,27 +78,237 @@ const { Content } = await post.render();
       margin-bottom: 40px;
     }
 
-    .comments-section {
-      border-left: 1px solid var(--border);
-      padding-left: 30px;
+    .post-content {
+      color: white;
     }
 
-    @media (max-width: 900px) {
-      .post-wrapper {
-        grid-template-columns: 1fr;
-      }
+    /* BOTÓN FLOTANTE */
 
-      .comments-section {
-        border-left: none;
-        border-top: 1px solid var(--border);
-        padding-left: 0;
-        padding-top: 30px;
+    .comments-toggle {
+      position: fixed;
+      bottom: 40px;
+      right: 40px;
+      background: white;
+      color: black;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 40px;
+      cursor: pointer;
+      font-size: 0.8em;
+      transition: 0.3s;
+      z-index: 1000;
+    }
+
+    .comments-toggle:hover {
+      transform: translateY(-3px);
+    }
+
+    /* OVERLAY */
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.3s;
+      z-index: 1001;
+    }
+
+    .overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    /* PANEL */
+
+    .comments-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 420px;
+      height: 100vh;
+      background: #0e0e0e;
+      border-left: 1px solid #222;
+      transform: translateX(100%);
+      transition: 0.35s cubic-bezier(.22,.61,.36,1);
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      z-index: 1002;
+    }
+
+    .comments-panel.active {
+      transform: translateX(0);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75em;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 30px;
+    }
+
+    .panel-header button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.4em;
+      cursor: pointer;
+    }
+
+    /* FORM */
+
+    .comment-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 35px;
+    }
+
+    .comment-form textarea {
+      background: #121212;
+      border: 1px solid #1e1e1e;
+      padding: 12px;
+      color: white;
+      resize: none;
+      font-size: 0.9em;
+      transition: 0.25s;
+    }
+
+    .comment-form textarea:focus {
+      outline: none;
+      border-color: #2a2a2a;
+      background: #151515;
+    }
+
+    .comment-form input {
+      background: #121212;
+      border: 1px solid #1e1e1e;
+      padding: 10px;
+      color: white;
+      font-size: 0.85em;
+    }
+
+    .comment-form input:focus {
+      outline: none;
+      border-color: #2a2a2a;
+    }
+
+    .submit-btn {
+      background: white;
+      color: black;
+      border: none;
+      padding: 10px;
+      cursor: pointer;
+      font-size: 0.8em;
+      transition: 0.3s;
+    }
+
+    .submit-btn:hover {
+      transform: scale(1.05);
+    }
+
+    /* LISTA */
+
+    .comments-list {
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      flex: 1;
+      padding-right: 4px;
+    }
+
+    .comment-item {
+      padding: 18px;
+      border: 1px solid #1c1c1c;
+      background: #111;
+      transition: 0.25s ease;
+    }
+
+    .comment-item:hover {
+      border-color: #2a2a2a;
+      background: #141414;
+    }
+
+    .comment-name {
+      font-size: 0.85em;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: white;
+    }
+
+    .comment-text {
+      font-size: 0.9em;
+      line-height: 1.7;
+      color: #ddd;
+      white-space: pre-wrap;
+    }
+
+    .comment-date {
+      font-size: 0.65em;
+      color: #555;
+      margin-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .delete-btn {
+      font-size: 0.65em;
+      color: #444;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .delete-btn:hover {
+      color: #ff4d4d;
+    }
+
+    /* Scroll minimal */
+
+    .comments-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .comments-list::-webkit-scrollbar-thumb {
+      background: #222;
+    }
+
+    .comments-list::-webkit-scrollbar-thumb:hover {
+      background: #333;
+    }
+
+    @media (max-width: 600px) {
+      .comments-panel {
+        width: 100%;
       }
     }
   </style>
 
   <script>
     const slug = "{slug}";
+    const panel = document.getElementById("commentsPanel");
+    const overlay = document.getElementById("overlay");
+
+    document.getElementById("openComments").onclick = () => {
+      panel.classList.add("active");
+      overlay.classList.add("active");
+    };
+
+    document.getElementById("closeComments").onclick = closePanel;
+    overlay.onclick = closePanel;
+
+    function closePanel() {
+      panel.classList.remove("active");
+      overlay.classList.remove("active");
+    }
 
     async function loadComments() {
       const res = await fetch(`/api/comments?slug=${slug}`);
@@ -92,11 +319,14 @@ const { Content } = await post.render();
 
       comments.forEach((c) => {
         const div = document.createElement("div");
-        div.style.marginBottom = "20px";
+        div.classList.add("comment-item");
         div.innerHTML = `
-          <strong>${c.name}</strong>
-          <p>${c.content}</p>
-          <small style="color: gray">${new Date(c.created_at).toLocaleString()}</small>
+          <div class="comment-name">${c.name}</div>
+          <div class="comment-text">${c.content}</div>
+          <div class="comment-date">
+            ${new Date(c.created_at).toLocaleDateString()}
+            <span class="delete-btn" data-id="${c.id}">Eliminar</span>
+          </div>
         `;
         container.appendChild(div);
       });
@@ -105,8 +335,10 @@ const { Content } = await post.render();
     document.getElementById("comment-form").addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const name = document.getElementById("comment-name").value;
+      const name = document.getElementById("comment-name").value || "Anónimo";
       const content = document.getElementById("comment-content").value;
+
+      if (!content.trim()) return;
 
       await fetch("/api/comments", {
         method: "POST",
@@ -120,6 +352,20 @@ const { Content } = await post.render();
 
       document.getElementById("comment-content").value = "";
       loadComments();
+    });
+
+    document.addEventListener("click", async (e) => {
+      if (e.target.classList.contains("delete-btn")) {
+        const id = e.target.getAttribute("data-id");
+
+        await fetch("/api/comments", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+
+        loadComments();
+      }
     });
 
     loadComments();
