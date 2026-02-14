@@ -598,14 +598,9 @@ const { Content } = await post.render();
   </style>
 
   <script is:inline>
-
-  <div id="post-slug" data-slug={`${slug}`} style="display:none"></div>
-
-
-  <script is:inline>
   function initCommentsSystem() {
 
-    const slug = document.getElementById("post-slug").dataset.slug;
+    const slug = {JSON.stringify(slug)};
     const panel = document.getElementById("commentsPanel");
     const overlay = document.getElementById("overlay");
     const adminInput = document.getElementById("admin-code");
