@@ -1,11 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
-console.log("URL:", process.env.SUPABASE_URL);
-console.log("KEY:", process.env.SUPABASE_ANON_KEY?.slice(0,20));
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
+const supabaseUrl = import.meta.env.SUPABASE_URL;
+const supabaseKey = import.meta.env.SUPABASE_ANON_KEY;
+
+console.log("URL:", supabaseUrl);
+console.log("KEY:", supabaseKey?.slice(0, 20));
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
 
 export async function GET({ url }) {
   const slug = url.searchParams.get("slug");

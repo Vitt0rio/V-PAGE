@@ -589,24 +589,31 @@ const { Content } = await post.render();
     }
   </style>
 
-  <script>
-    const slug = "{slug}";
+  <script is:inline>
+  function initCommentsSystem() {
+
+    const slug = window.location.pathname.split("/").pop();
     const panel = document.getElementById("commentsPanel");
     const overlay = document.getElementById("overlay");
     const adminInput = document.getElementById("admin-code");
     const commentCount = document.getElementById("commentCount");
     const emptyState = document.getElementById("emptyState");
     const commentsList = document.getElementById("comments-list");
+    const openBtn = document.getElementById("openComments");
+    const closeBtn = document.getElementById("closeComments");
+    const form = document.getElementById("comment-form");
+
+    if (!panel || !openBtn) return;
 
     let isAdmin = false;
 
-    document.getElementById("openComments").onclick = () => {
+    openBtn.onclick = () => {
       panel.classList.add("active");
       overlay.classList.add("active");
       document.body.style.overflow = "hidden";
     };
 
-    document.getElementById("closeComments").onclick = closePanel;
+    closeBtn.onclick = closePanel;
     overlay.onclick = closePanel;
 
     function closePanel() {
@@ -615,7 +622,6 @@ const { Content } = await post.render();
       document.body.style.overflow = "";
     }
 
-    // Cerrar con ESC
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && panel.classList.contains("active")) {
         closePanel();
@@ -631,11 +637,9 @@ const { Content } = await post.render();
       const res = await fetch(`/api/comments?slug=${slug}`);
       const comments = await res.json();
 
-      // Actualizar contador
       const count = comments.length;
       commentCount.textContent = count;
 
-      // Mostrar/ocultar estado vacío
       if (count === 0) {
         emptyState.classList.add("visible");
         commentsList.style.display = "none";
@@ -651,35 +655,24 @@ const { Content } = await post.render();
         div.classList.add("comment-item");
 
         const name = c.name || "Anónimo";
-        const dateStr = new Date(c.created_at).toLocaleDateString('es-ES', { 
-          day: 'numeric', 
-          month: 'long', 
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
+        const dateStr = new Date(c.created_at).toLocaleString("es-ES");
 
-        // Nombre
         const nameDiv = document.createElement("div");
         nameDiv.className = "comment-name";
         nameDiv.textContent = name;
-        
-        // Texto del comentario
+
         const text = document.createElement("div");
         text.className = "comment-text";
         text.textContent = c.content;
-        
-        // Fecha
+
         const dateDiv = document.createElement("div");
         dateDiv.className = "comment-date";
         dateDiv.textContent = dateStr;
-        
-        // Agregar elementos al comentario
+
         div.appendChild(nameDiv);
         div.appendChild(text);
         div.appendChild(dateDiv);
-        
-        // Agregar botón de eliminar si es admin
+
         if (isAdmin) {
           const deleteBtn = document.createElement("div");
           deleteBtn.className = "delete-btn";
@@ -708,20 +701,16 @@ const { Content } = await post.render();
       }
     });
 
-    document.getElementById("comment-form").addEventListener("submit", async (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const nameInput = document.getElementById("comment-name");
       const contentInput = document.getElementById("comment-content");
-      
+
       const name = nameInput.value.trim() || "Anónimo";
       const content = contentInput.value.trim();
 
       if (!content) return;
-
-      const submitBtn = e.target.querySelector(".submit-btn");
-      submitBtn.disabled = true;
-      submitBtn.style.opacity = "0.6";
 
       await fetch("/api/comments", {
         method: "POST",
@@ -735,21 +724,19 @@ const { Content } = await post.render();
 
       contentInput.value = "";
       nameInput.value = "";
-      submitBtn.disabled = false;
-      submitBtn.style.opacity = "1";
-      
+
       await loadComments();
-      
-      // Scroll al último comentario
-      setTimeout(() => {
-        const lastComment = commentsList.lastElementChild;
-        if (lastComment) {
-          lastComment.scrollIntoView({ behavior: "smooth", block: "nearest" });
-        }
-      }, 100);
     });
 
     loadComments();
-  </script>
+  }
+
+  // Ejecutar al cargar normal
+  document.addEventListener("DOMContentLoaded", initCommentsSystem);
+
+  // Ejecutar cuando Astro cambia de página
+  document.addEventListener("astro:page-load", initCommentsSystem);
+</script>
+
 
 </BaseLayout>
