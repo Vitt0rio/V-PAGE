@@ -86,6 +86,14 @@ const { Content } = await post.render();
           placeholder="Tu nombre (opcional)"
           maxlength="50"
         />
+         <input
+           type="text"
+           name="website"
+           id="comment-website"
+           style="display:none"
+           autocomplete="off"
+        />
+
         <button type="submit" class="submit-btn">
           <span>Publicar</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -588,11 +596,16 @@ const { Content } = await post.render();
       }
     }
   </style>
+  <script is:inline>
+
+  const CURRENT_SLUG = {JSON.stringify(slug)};
+</script>
+
 
   <script is:inline>
   function initCommentsSystem() {
 
-    const slug = window.location.pathname.split("/").pop();
+    const slug = CURRENT_SLUG;
     const panel = document.getElementById("commentsPanel");
     const overlay = document.getElementById("overlay");
     const adminInput = document.getElementById("admin-code");
@@ -654,7 +667,8 @@ const { Content } = await post.render();
         const div = document.createElement("div");
         div.classList.add("comment-item");
 
-        const name = c.name || "Anónimo";
+        const name = c.author || "Anónimo";
+
         const dateStr = new Date(c.created_at).toLocaleString("es-ES");
 
         const nameDiv = document.createElement("div");
@@ -702,33 +716,44 @@ const { Content } = await post.render();
     });
 
     form.addEventListener("submit", async (e) => {
-      e.preventDefault();
+  e.preventDefault();
 
-      const nameInput = document.getElementById("comment-name");
-      const contentInput = document.getElementById("comment-content");
+  const nameInput = document.getElementById("comment-name");
+  const contentInput = document.getElementById("comment-content");
+  const websiteInput = document.getElementById("comment-website");
+  const submitBtn = form.querySelector(".submit-btn");
 
-      const name = nameInput.value.trim() || "Anónimo";
-      const content = contentInput.value.trim();
+  const name = nameInput.value.trim() || "Anónimo";
+  const content = contentInput.value.trim();
+  const website = websiteInput.value.trim(); // 👈 honeypot
 
-      if (!content) return;
+  if (!content) return;
 
-      await fetch("/api/comments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          post_slug: slug,
-          name,
-          content,
-        }),
-      });
+  // UX mejorada
+  submitBtn.disabled = true;
+  submitBtn.querySelector("span").textContent = "Publicando...";
 
-      contentInput.value = "";
-      nameInput.value = "";
+  await fetch("/api/comments", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      post_slug: slug,
+      author: name,
+      content,
+      website, // 👈 se envía al backend
+    }),
+  });
 
-      await loadComments();
-    });
+  contentInput.value = "";
+  nameInput.value = "";
+  websiteInput.value = "";
 
-    loadComments();
+  submitBtn.disabled = false;
+  submitBtn.querySelector("span").textContent = "Publicar";
+
+  await loadComments();
+});
+
   }
 
   // Ejecutar al cargar normal
