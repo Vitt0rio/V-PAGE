@@ -16,7 +16,6 @@ const { Content } = await post.render();
 
 <div id="__post_slug" data-slug={slug}></div>
 
-
   <div class="post-container">
     <h1 class="post-title">{post.data.title}</h1>
     <div class="post-date">{post.data.date.toDateString()}</div>
@@ -80,7 +79,10 @@ const { Content } = await post.render();
         placeholder="Comparte tu opinión..."
         required
         rows="4"
+        maxlength="1000"
       ></textarea>
+
+      <div class="char-count" id="charCount">0/1000</div>
 
       <div class="form-bottom">
         <input
@@ -95,9 +97,10 @@ const { Content } = await post.render();
            id="comment-website"
            style="display:none"
            autocomplete="off"
+           tabindex="-1"
         />
 
-        <button type="submit" class="submit-btn">
+        <button type="submit" class="submit-btn" id="submitBtn">
           <span>Publicar</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -105,9 +108,17 @@ const { Content } = await post.render();
           </svg>
         </button>
       </div>
+
+      <div class="error-message" id="errorMessage"></div>
     </form>
 
     <div class="comments-divider"></div>
+
+    <!-- Loading state -->
+    <div class="loading-state" id="loadingState">
+      <div class="spinner"></div>
+      <p>Cargando comentarios...</p>
+    </div>
 
     <div id="comments-list" class="comments-list"></div>
 
@@ -139,7 +150,7 @@ const { Content } = await post.render();
       margin-bottom: 40px;
     }
 
-    /* ========== BOTÓN FLOTANTE MEJORADO ========== */
+    /* ========== BOTÓN FLOTANTE ========== */
     .comments-toggle {
       position: fixed;
       bottom: 40px;
@@ -212,7 +223,6 @@ const { Content } = await post.render();
       transform: translateX(0);
     }
 
-    /* Custom scrollbar */
     .comments-panel::-webkit-scrollbar {
       width: 8px;
     }
@@ -230,7 +240,7 @@ const { Content } = await post.render();
       background: rgba(255, 255, 255, 0.2);
     }
 
-    /* ========== HEADER DEL PANEL ========== */
+    /* ========== HEADER ========== */
     .panel-header {
       position: sticky;
       top: 0;
@@ -410,6 +420,14 @@ const { Content } = await post.render();
       color: #555;
     }
 
+    .char-count {
+      font-size: 0.7em;
+      color: #555;
+      text-align: right;
+      margin-top: 4px;
+      margin-bottom: 8px;
+    }
+
     .form-bottom {
       display: flex;
       gap: 12px;
@@ -450,13 +468,29 @@ const { Content } = await post.render();
       white-space: nowrap;
     }
 
-    .submit-btn:hover {
+    .submit-btn:hover:not(:disabled) {
       transform: translateY(-1px);
       box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
     }
 
     .submit-btn:active {
       transform: translateY(0);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .error-message {
+      color: #ef4444;
+      font-size: 0.8em;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .error-message.visible {
+      display: block;
     }
 
     /* ========== DIVISOR ========== */
@@ -468,6 +502,38 @@ const { Content } = await post.render();
         transparent 100%
       );
       margin: 0 32px;
+    }
+
+    /* ========== LOADING STATE ========== */
+    .loading-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 32px;
+      gap: 16px;
+    }
+
+    .loading-state.visible {
+      display: flex;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-state p {
+      color: #666;
+      font-size: 0.9em;
     }
 
     /* ========== LISTA DE COMENTARIOS ========== */
@@ -537,6 +603,8 @@ const { Content } = await post.render();
       transition: all 0.2s;
       align-self: flex-start;
       margin-top: 4px;
+      border: none;
+      background: transparent;
     }
 
     .delete-btn:hover {
@@ -607,14 +675,30 @@ const { Content } = await post.render();
       const adminInput = document.getElementById("admin-code");
       const commentCount = document.getElementById("commentCount");
       const emptyState = document.getElementById("emptyState");
+      const loadingState = document.getElementById("loadingState");
       const commentsList = document.getElementById("comments-list");
       const openBtn = document.getElementById("openComments");
       const closeBtn = document.getElementById("closeComments");
       const form = document.getElementById("comment-form");
+      const contentInput = document.getElementById("comment-content");
+      const charCount = document.getElementById("charCount");
+      const errorMessage = document.getElementById("errorMessage");
 
       if (!panel || !openBtn) return;
 
       let isAdmin = false;
+
+      // Character counter
+      contentInput?.addEventListener("input", () => {
+        const length = contentInput.value.length;
+        charCount.textContent = `${length}/1000`;
+        
+        if (length > 900) {
+          charCount.style.color = "#ef4444";
+        } else {
+          charCount.style.color = "#555";
+        }
+      });
 
       openBtn.onclick = () => {
         panel.classList.add("active");
@@ -638,63 +722,94 @@ const { Content } = await post.render();
         }
       });
 
-      adminInput.addEventListener("input", () => {
+      adminInput?.addEventListener("input", () => {
         isAdmin = adminInput.value === "0000";
         loadComments();
       });
 
+      function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.classList.add("visible");
+        setTimeout(() => {
+          errorMessage.classList.remove("visible");
+        }, 5000);
+      }
+
       async function loadComments() {
-        const currentSlug = document.getElementById("__post_slug").dataset.slug;
+        const currentSlug = document.getElementById("__post_slug")?.dataset.slug;
+        if (!currentSlug) return;
 
-        const res = await fetch(`/api/comments?slug=${currentSlug}`);
-        const comments = await res.json();
-
-        const count = comments.length;
-        commentCount.textContent = count;
-
-        if (count === 0) {
-          emptyState.classList.add("visible");
-          commentsList.style.display = "none";
-        } else {
+        try {
+          loadingState.classList.add("visible");
           emptyState.classList.remove("visible");
-          commentsList.style.display = "flex";
-        }
+          commentsList.style.display = "none";
 
-        commentsList.innerHTML = "";
-
-        comments.forEach((c) => {
-          const div = document.createElement("div");
-          div.classList.add("comment-item");
-
-          const name = c.author || "Anónimo";
-          const dateStr = new Date(c.created_at).toLocaleString("es-ES");
-
-          const nameDiv = document.createElement("div");
-          nameDiv.className = "comment-name";
-          nameDiv.textContent = name;
-
-          const text = document.createElement("div");
-          text.className = "comment-text";
-          text.textContent = c.content;
-
-          const dateDiv = document.createElement("div");
-          dateDiv.className = "comment-date";
-          dateDiv.textContent = dateStr;
-
-          div.appendChild(nameDiv);
-          div.appendChild(text);
-          div.appendChild(dateDiv);
-
-          if (isAdmin) {
-            const deleteBtn = document.createElement("div");
-            deleteBtn.className = "delete-btn";
-            deleteBtn.setAttribute("data-id", c.id);
-            deleteBtn.textContent = "🗑 Eliminar";
-            div.appendChild(deleteBtn);
+          const res = await fetch(`/api/comments?slug=${encodeURIComponent(currentSlug)}`);
+          
+          if (!res.ok) {
+            throw new Error("Error al cargar comentarios");
           }
 
-          commentsList.appendChild(div);
-        });
+          const comments = await res.json();
+          const count = comments.length;
+          commentCount.textContent = count;
+
+          loadingState.classList.remove("visible");
+
+          if (count === 0) {
+            emptyState.classList.add("visible");
+            commentsList.style.display = "none";
+          } else {
+            emptyState.classList.remove("visible");
+            commentsList.style.display = "flex";
+          }
+
+          commentsList.innerHTML = "";
+
+          comments.forEach((c) => {
+            const div = document.createElement("div");
+            div.classList.add("comment-item");
+
+            const name = c.author || "Anónimo";
+            const dateStr = new Date(c.created_at).toLocaleString("es-ES", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit"
+            });
+
+            const nameDiv = document.createElement("div");
+            nameDiv.className = "comment-name";
+            nameDiv.textContent = name;
+
+            const text = document.createElement("div");
+            text.className = "comment-text";
+            text.textContent = c.content;
+
+            const dateDiv = document.createElement("div");
+            dateDiv.className = "comment-date";
+            dateDiv.textContent = dateStr;
+
+            div.appendChild(nameDiv);
+            div.appendChild(text);
+            div.appendChild(dateDiv);
+
+            if (isAdmin) {
+              const deleteBtn = document.createElement("button");
+              deleteBtn.className = "delete-btn";
+              deleteBtn.setAttribute("data-id", c.id);
+              deleteBtn.textContent = "🗑 Eliminar";
+              div.appendChild(deleteBtn);
+            }
+
+            commentsList.appendChild(div);
+          });
+        } catch (err) {
+          console.error("Error loading comments:", err);
+          loadingState.classList.remove("visible");
+          showError("Error al cargar los comentarios");
+        }
       }
 
       document.addEventListener("click", async (e) => {
@@ -702,53 +817,76 @@ const { Content } = await post.render();
           const id = e.target.getAttribute("data-id");
 
           if (confirm("¿Eliminar este comentario?")) {
-            await fetch("/api/comments", {
-              method: "DELETE",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ id }),
-            });
+            try {
+              const res = await fetch("/api/comments", {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id }),
+              });
 
-            loadComments();
+              if (!res.ok) {
+                throw new Error("Error al eliminar");
+              }
+
+              await loadComments();
+            } catch (err) {
+              console.error("Error deleting comment:", err);
+              showError("Error al eliminar el comentario");
+            }
           }
         }
       });
 
-      form.addEventListener("submit", async (e) => {
+      form?.addEventListener("submit", async (e) => {
         e.preventDefault();
 
         const nameInput = document.getElementById("comment-name");
         const contentInput = document.getElementById("comment-content");
         const websiteInput = document.getElementById("comment-website");
-        const submitBtn = form.querySelector(".submit-btn");
+        const submitBtn = document.getElementById("submitBtn");
 
-        const name = nameInput.value.trim() || "Anónimo";
-        const content = contentInput.value.trim();
-        const website = websiteInput.value.trim();
+        const name = nameInput?.value.trim() || "Anónimo";
+        const content = contentInput?.value.trim();
+        const website = websiteInput?.value.trim();
 
-        if (!content) return;
+        if (!content || content.length < 3) {
+          showError("El comentario debe tener al menos 3 caracteres");
+          return;
+        }
 
-        submitBtn.disabled = true;
-        submitBtn.querySelector("span").textContent = "Publicando...";
+        try {
+          submitBtn.disabled = true;
+          submitBtn.querySelector("span").textContent = "Publicando...";
 
-        await fetch("/api/comments", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            post_slug: document.getElementById("__post_slug").dataset.slug,
-            author: name,
-            content,
-            website,
-          }),
-        });
+          const res = await fetch("/api/comments", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              post_slug: document.getElementById("__post_slug")?.dataset.slug,
+              author: name,
+              content,
+              website,
+            }),
+          });
 
-        contentInput.value = "";
-        nameInput.value = "";
-        websiteInput.value = "";
+          if (!res.ok) {
+            const error = await res.json();
+            throw new Error(error.error || "Error al publicar");
+          }
 
-        submitBtn.disabled = false;
-        submitBtn.querySelector("span").textContent = "Publicar";
+          contentInput.value = "";
+          nameInput.value = "";
+          websiteInput.value = "";
+          charCount.textContent = "0/1000";
 
-        await loadComments();
+          await loadComments();
+        } catch (err) {
+          console.error("Error posting comment:", err);
+          showError(err.message || "Error al publicar el comentario");
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.querySelector("span").textContent = "Publicar";
+        }
       });
     }
 
