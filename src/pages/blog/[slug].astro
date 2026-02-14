@@ -14,6 +14,9 @@ const { Content } = await post.render();
 
 <BaseLayout title={post.data.title}>
 
+<div id="__post_slug" data-slug={slug}></div>
+
+
   <div class="post-container">
     <h1 class="post-title">{post.data.title}</h1>
     <div class="post-date">{post.data.date.toDateString()}</div>
@@ -600,7 +603,7 @@ const { Content } = await post.render();
   <script is:inline>
   function initCommentsSystem() {
 
-    const slug = "{slug}";
+    const slug = document.getElementById("__post_slug").dataset.slug;
     const panel = document.getElementById("commentsPanel");
     const overlay = document.getElementById("overlay");
     const adminInput = document.getElementById("admin-code");
