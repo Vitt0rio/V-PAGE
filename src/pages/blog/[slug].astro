@@ -619,10 +619,12 @@ const { Content } = await post.render();
     let isAdmin = false;
 
     openBtn.onclick = () => {
-      panel.classList.add("active");
-      overlay.classList.add("active");
-      document.body.style.overflow = "hidden";
-    };
+  panel.classList.add("active");
+  overlay.classList.add("active");
+  document.body.style.overflow = "hidden";
+  loadComments(); // ← LÍNEA NUEVA
+};
+
 
     closeBtn.onclick = closePanel;
     overlay.onclick = closePanel;
@@ -645,58 +647,59 @@ const { Content } = await post.render();
     });
 
     async function loadComments() {
-      const currentSlug = window.location.pathname.split("/").filter(Boolean).pop();
-const res = await fetch(`/api/comments?slug=${currentSlug}`);
+  const currentSlug = document.getElementById("__post_slug").dataset.slug;
 
-      const comments = await res.json();
+  const res = await fetch(`/api/comments?slug=${currentSlug}`);
+  const comments = await res.json();
 
-      const count = comments.length;
-      commentCount.textContent = count;
+  const count = comments.length;
+  commentCount.textContent = count;
 
-      if (count === 0) {
-        emptyState.classList.add("visible");
-        commentsList.style.display = "none";
-      } else {
-        emptyState.classList.remove("visible");
-        commentsList.style.display = "flex";
-      }
+  if (count === 0) {
+    emptyState.classList.add("visible");
+    commentsList.style.display = "none";
+  } else {
+    emptyState.classList.remove("visible");
+    commentsList.style.display = "flex";
+  }
 
-      commentsList.innerHTML = "";
+  commentsList.innerHTML = "";
 
-      comments.forEach((c) => {
-        const div = document.createElement("div");
-        div.classList.add("comment-item");
+  comments.forEach((c) => {
+    const div = document.createElement("div");
+    div.classList.add("comment-item");
 
-        const name = c.author || "Anónimo";
+    const name = c.author || "Anónimo";
+    const dateStr = new Date(c.created_at).toLocaleString("es-ES");
 
-        const dateStr = new Date(c.created_at).toLocaleString("es-ES");
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "comment-name";
+    nameDiv.textContent = name;
 
-        const nameDiv = document.createElement("div");
-        nameDiv.className = "comment-name";
-        nameDiv.textContent = name;
+    const text = document.createElement("div");
+    text.className = "comment-text";
+    text.textContent = c.content;
 
-        const text = document.createElement("div");
-        text.className = "comment-text";
-        text.textContent = c.content;
+    const dateDiv = document.createElement("div");
+    dateDiv.className = "comment-date";
+    dateDiv.textContent = dateStr;
 
-        const dateDiv = document.createElement("div");
-        dateDiv.className = "comment-date";
-        dateDiv.textContent = dateStr;
+    div.appendChild(nameDiv);
+    div.appendChild(text);
+    div.appendChild(dateDiv);
 
-        div.appendChild(nameDiv);
-        div.appendChild(text);
-        div.appendChild(dateDiv);
+    if (isAdmin) {
+      const deleteBtn = document.createElement("div");
+      deleteBtn.className = "delete-btn";
+      deleteBtn.setAttribute("data-id", c.id);
+      deleteBtn.textContent = "🗑 Eliminar";
+      div.appendChild(deleteBtn);
+    }
 
-        if (isAdmin) {
-          const deleteBtn = document.createElement("div");
-          deleteBtn.className = "delete-btn";
-          deleteBtn.setAttribute("data-id", c.id);
-          deleteBtn.textContent = "🗑 Eliminar";
-          div.appendChild(deleteBtn);
-        }
+    commentsList.appendChild(div);
+  });
+}
 
-        commentsList.appendChild(div);
-      });
     }
 
     document.addEventListener("click", async (e) => {
@@ -737,7 +740,7 @@ const res = await fetch(`/api/comments?slug=${currentSlug}`);
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      post_slug: window.location.pathname.split("/").filter(Boolean).pop(),
+      post_slug: document.getElementById("__post_slug").dataset.slug,
       author: name,
       content,
       website, // 👈 se envía al backend
@@ -754,7 +757,6 @@ const res = await fetch(`/api/comments?slug=${currentSlug}`);
   await loadComments();
 });
 
-  }
 
   // Ejecutar al cargar normal
   document.addEventListener("DOMContentLoaded", initCommentsSystem);
