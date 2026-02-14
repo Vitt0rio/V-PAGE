@@ -596,16 +596,15 @@ const { Content } = await post.render();
       }
     }
   </style>
+
   <script is:inline>
 
-  const CURRENT_SLUG = {JSON.stringify(slug)};
-</script>
-
+  <div id="post-slug" data-slug={slug} style="display:none"></div>
 
   <script is:inline>
   function initCommentsSystem() {
 
-    const slug = "{slug}";
+    const slug = document.getElementById("post-slug").dataset.slug;
     const panel = document.getElementById("commentsPanel");
     const overlay = document.getElementById("overlay");
     const adminInput = document.getElementById("admin-code");
