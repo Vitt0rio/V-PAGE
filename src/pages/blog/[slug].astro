@@ -14,7 +14,7 @@ const { Content } = await post.render();
 
 <BaseLayout title={post.data.title}>
 
-  <!-- CONTENIDO DEL POST -->
+  <!-- CONTENIDO -->
   <div class="post-container">
     <h1 class="post-title">{post.data.title}</h1>
     <div class="post-date">{post.data.date.toDateString()}</div>
@@ -24,40 +24,50 @@ const { Content } = await post.render();
     </div>
   </div>
 
-  <!-- BOTÓN FLOTANTE -->
+  <!-- BOTÓN ABRIR -->
   <button class="comments-toggle" id="openComments">
     Comentarios
   </button>
 
-  <!-- OVERLAY -->
   <div class="overlay" id="overlay"></div>
 
   <!-- PANEL LATERAL -->
   <aside class="comments-panel" id="commentsPanel">
+
     <div class="panel-header">
       <span>Comentarios</span>
       <button id="closeComments">×</button>
+    </div>
+
+    <!-- 🔐 PANEL ADMIN -->
+    <div class="admin-panel">
+      <input
+        type="password"
+        id="admin-code"
+        placeholder="Código admin"
+      />
     </div>
 
     <!-- FORMULARIO -->
     <form id="comment-form" class="comment-form">
       <textarea
         id="comment-content"
-        placeholder="Escribe un comentario..."
+        placeholder="Agrega un comentario..."
         required
       ></textarea>
 
-      <input
-        type="text"
-        id="comment-name"
-        placeholder="Nombre (opcional)"
-      />
-
-      <button type="submit" class="submit-btn">Enviar</button>
+      <div class="form-bottom">
+        <input
+          type="text"
+          id="comment-name"
+          placeholder="Nombre (opcional)"
+        />
+        <button type="submit" class="submit-btn">Enviar</button>
+      </div>
     </form>
 
-    <!-- LISTA -->
     <div id="comments-list" class="comments-list"></div>
+
   </aside>
 
   <style>
@@ -68,21 +78,11 @@ const { Content } = await post.render();
       line-height: 2;
     }
 
-    .post-title {
-      margin-bottom: 10px;
-    }
-
     .post-date {
-      font-size: 0.8em;
-      color: var(--text-light);
+      font-size: 0.75em;
+      color: #555;
       margin-bottom: 40px;
     }
-
-    .post-content {
-      color: white;
-    }
-
-    /* BOTÓN FLOTANTE */
 
     .comments-toggle {
       position: fixed;
@@ -91,19 +91,13 @@ const { Content } = await post.render();
       background: white;
       color: black;
       border: none;
-      padding: 14px 24px;
+      padding: 10px 20px;
       border-radius: 40px;
+      font-size: 0.75em;
       cursor: pointer;
-      font-size: 0.8em;
-      transition: 0.3s;
+      transition: 0.25s;
       z-index: 1000;
     }
-
-    .comments-toggle:hover {
-      transform: translateY(-3px);
-    }
-
-    /* OVERLAY */
 
     .overlay {
       position: fixed;
@@ -121,16 +115,14 @@ const { Content } = await post.render();
       pointer-events: all;
     }
 
-    /* PANEL */
-
     .comments-panel {
       position: fixed;
       top: 0;
       right: 0;
-      width: 420px;
+      width: 460px;
       height: 100vh;
-      background: #0e0e0e;
-      border-left: 1px solid #222;
+      background: #0c0c0c;
+      border-left: 1px solid #1e1e1e;
       transform: translateX(100%);
       transition: 0.35s cubic-bezier(.22,.61,.36,1);
       padding: 40px;
@@ -147,142 +139,140 @@ const { Content } = await post.render();
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.75em;
+      font-size: 0.7em;
       letter-spacing: 3px;
       text-transform: uppercase;
-      color: #888;
-      margin-bottom: 30px;
+      color: #666;
+      margin-bottom: 20px;
     }
 
     .panel-header button {
       background: none;
       border: none;
       color: white;
-      font-size: 1.4em;
+      font-size: 1.2em;
       cursor: pointer;
+    }
+
+    /* 🔐 ADMIN */
+
+    .admin-panel {
+      margin-bottom: 20px;
+    }
+
+    .admin-panel input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #222;
+      padding: 6px 0;
+      color: #888;
+      font-size: 0.7em;
+    }
+
+    .admin-panel input:focus {
+      outline: none;
+      border-color: white;
     }
 
     /* FORM */
 
-    .comment-form {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      margin-bottom: 35px;
-    }
-
     .comment-form textarea {
-      background: #121212;
-      border: 1px solid #1e1e1e;
-      padding: 12px;
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #222;
+      padding: 10px 0;
       color: white;
       resize: none;
-      font-size: 0.9em;
-      transition: 0.25s;
+      font-size: 0.85em;
     }
 
     .comment-form textarea:focus {
       outline: none;
-      border-color: #2a2a2a;
-      background: #151515;
+      border-color: white;
     }
 
-    .comment-form input {
-      background: #121212;
-      border: 1px solid #1e1e1e;
-      padding: 10px;
-      color: white;
-      font-size: 0.85em;
+    .form-bottom {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
     }
 
-    .comment-form input:focus {
-      outline: none;
-      border-color: #2a2a2a;
+    .form-bottom input {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #222;
+      padding: 6px 0;
+      color: #aaa;
+      font-size: 0.75em;
+      width: 60%;
     }
 
     .submit-btn {
-      background: white;
-      color: black;
-      border: none;
-      padding: 10px;
+      background: transparent;
+      border: 1px solid white;
+      color: white;
+      padding: 6px 14px;
+      font-size: 0.7em;
       cursor: pointer;
-      font-size: 0.8em;
-      transition: 0.3s;
+      transition: 0.25s;
     }
 
     .submit-btn:hover {
-      transform: scale(1.05);
+      background: white;
+      color: black;
     }
 
-    /* LISTA */
+    /* COMENTARIOS */
 
     .comments-list {
+      margin-top: 30px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 22px;
+      gap: 26px;
       flex: 1;
-      padding-right: 4px;
     }
 
     .comment-item {
-      padding: 18px;
-      border: 1px solid #1c1c1c;
-      background: #111;
-      transition: 0.25s ease;
-    }
-
-    .comment-item:hover {
-      border-color: #2a2a2a;
-      background: #141414;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
 
     .comment-name {
-      font-size: 0.85em;
+      font-size: 0.82em;
       font-weight: 600;
-      margin-bottom: 8px;
-      color: white;
+      color: #f0f0f0;
     }
 
     .comment-text {
-      font-size: 0.9em;
+      font-size: 0.85em;
+      font-style: italic;
       line-height: 1.7;
-      color: #ddd;
+      color: #d6d6d6;
       white-space: pre-wrap;
     }
 
+    /* FECHA DEBAJO — MITAD DEL TAMAÑO */
+
     .comment-date {
-      font-size: 0.65em;
-      color: #555;
-      margin-top: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      font-size: 0.42em;
+      color: #444;
+      margin-top: 4px;
     }
 
     .delete-btn {
-      font-size: 0.65em;
-      color: #444;
+      font-size: 0.6em;
+      color: #555;
       cursor: pointer;
-      transition: 0.2s;
+      margin-top: 4px;
+      display: none;
     }
 
     .delete-btn:hover {
       color: #ff4d4d;
-    }
-
-    /* Scroll minimal */
-
-    .comments-list::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .comments-list::-webkit-scrollbar-thumb {
-      background: #222;
-    }
-
-    .comments-list::-webkit-scrollbar-thumb:hover {
-      background: #333;
     }
 
     @media (max-width: 600px) {
@@ -296,6 +286,9 @@ const { Content } = await post.render();
     const slug = "{slug}";
     const panel = document.getElementById("commentsPanel");
     const overlay = document.getElementById("overlay");
+    const adminInput = document.getElementById("admin-code");
+
+    let isAdmin = false;
 
     document.getElementById("openComments").onclick = () => {
       panel.classList.add("active");
@@ -310,6 +303,11 @@ const { Content } = await post.render();
       overlay.classList.remove("active");
     }
 
+    adminInput.addEventListener("input", () => {
+      isAdmin = adminInput.value === "0000";
+      loadComments();
+    });
+
     async function loadComments() {
       const res = await fetch(`/api/comments?slug=${slug}`);
       const comments = await res.json();
@@ -320,17 +318,33 @@ const { Content } = await post.render();
       comments.forEach((c) => {
         const div = document.createElement("div");
         div.classList.add("comment-item");
+
         div.innerHTML = `
-          <div class="comment-name">${c.name}</div>
+          <div class="comment-name">${c.name || "Anónimo"}</div>
           <div class="comment-text">${c.content}</div>
           <div class="comment-date">
             ${new Date(c.created_at).toLocaleDateString()}
-            <span class="delete-btn" data-id="${c.id}">Eliminar</span>
           </div>
+          ${isAdmin ? `<div class="delete-btn" data-id="${c.id}">Eliminar</div>` : ""}
         `;
+
         container.appendChild(div);
       });
     }
+
+    document.addEventListener("click", async (e) => {
+      if (e.target.classList.contains("delete-btn")) {
+        const id = e.target.getAttribute("data-id");
+
+        await fetch("/api/comments", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+
+        loadComments();
+      }
+    });
 
     document.getElementById("comment-form").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -352,20 +366,6 @@ const { Content } = await post.render();
 
       document.getElementById("comment-content").value = "";
       loadComments();
-    });
-
-    document.addEventListener("click", async (e) => {
-      if (e.target.classList.contains("delete-btn")) {
-        const id = e.target.getAttribute("data-id");
-
-        await fetch("/api/comments", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id }),
-        });
-
-        loadComments();
-      }
     });
 
     loadComments();
