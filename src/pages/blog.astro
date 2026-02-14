@@ -31,7 +31,8 @@ posts.sort((a, b) => new Date(b.data.date) - new Date(a.data.date));
           </h2>
 
           <p class="card-preview">
-            {post.body.slice(0, 130)}...
+            {post.body?.slice(0, 130)}...
+
           </p>
 
         </div>
